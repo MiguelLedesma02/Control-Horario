@@ -60,7 +60,7 @@ public class MotorReglasService
     }
 
     private static IEnumerable<Fichada> fichasDelDia(IEnumerable<Fichada> fichadas, DateTime dia)
-        => fichadas.Where(f => f.TimestampLocal.Date == dia.Date);
+        => fichadas.Where(f => f.Timestamp.Date == dia.Date);
 
     private static HashSet<DateTime> ObtenerDiasJustificados(IEnumerable<Novedad> novedadesAprobadas)
     {
@@ -105,10 +105,10 @@ public class MotorReglasService
         // ─── Caso 2: hay fichadas en día NO laborable o feriado → potencial 100% ───
         if ((!esLaborable || esFeriado) && entrada != null && salida != null)
         {
-            int minutos = (int)(salida.TimestampLocal - entrada.TimestampLocal).TotalMinutes;
+            int minutos = (int)(salida.Timestamp - entrada.Timestamp).TotalMinutes;
             // Descontar descanso si lo tomó
             if (salidaDesc != null && regresoDesc != null)
-                minutos -= (int)(regresoDesc.TimestampLocal - salidaDesc.TimestampLocal).TotalMinutes;
+                minutos -= (int)(regresoDesc.Timestamp - salidaDesc.Timestamp).TotalMinutes;
 
             if (minutos > 0)
             {
@@ -127,12 +127,12 @@ public class MotorReglasService
         {
             var entradaEsperada = dia.Date.Add(horario.HoraEntrada);
             var tolerancia = TimeSpan.FromMinutes(horario.ToleranciaEntradaMin);
-            if (entrada.TimestampLocal > entradaEsperada.Add(tolerancia))
+            if (entrada.Timestamp > entradaEsperada.Add(tolerancia))
             {
-                int delta = (int)(entrada.TimestampLocal - entradaEsperada).TotalMinutes;
+                int delta = (int)(entrada.Timestamp - entradaEsperada).TotalMinutes;
                 resultado.Add(NuevaNovedad(empleado, TipoNovedad.Tardanza,
                     dia, dia, delta, OrigenNovedad.Automatica,
-                    $"Llegó a las {entrada.TimestampLocal:HH:mm}, esperado {horario.HoraEntrada:hh\\:mm} (+{delta} min)"));
+                    $"Llegó a las {entrada.Timestamp:HH:mm}, esperado {horario.HoraEntrada:hh\\:mm} (+{delta} min)"));
             }
         }
         else if (esLaborable && !diasJustificados.Contains(dia.Date))
@@ -148,12 +148,12 @@ public class MotorReglasService
         {
             var salidaEsperada = dia.Date.Add(horario.HoraSalida);
             var tolerancia = TimeSpan.FromMinutes(horario.ToleranciaSalidaMin);
-            if (salida.TimestampLocal < salidaEsperada.Subtract(tolerancia))
+            if (salida.Timestamp < salidaEsperada.Subtract(tolerancia))
             {
-                int delta = (int)(salidaEsperada - salida.TimestampLocal).TotalMinutes;
+                int delta = (int)(salidaEsperada - salida.Timestamp).TotalMinutes;
                 resultado.Add(NuevaNovedad(empleado, TipoNovedad.SalidaAnticipada,
                     dia, dia, delta, OrigenNovedad.Automatica,
-                    $"Salió a las {salida.TimestampLocal:HH:mm}, esperado {horario.HoraSalida:hh\\:mm} (-{delta} min)"));
+                    $"Salió a las {salida.Timestamp:HH:mm}, esperado {horario.HoraSalida:hh\\:mm} (-{delta} min)"));
             }
         }
 
@@ -162,9 +162,9 @@ public class MotorReglasService
         {
             var salidaEsperada = dia.Date.Add(horario.HoraSalida);
             var umbral = TimeSpan.FromMinutes(horario.UmbralHorasExtraMin);
-            if (salida.TimestampLocal > salidaEsperada.Add(umbral))
+            if (salida.Timestamp > salidaEsperada.Add(umbral))
             {
-                int delta = (int)(salida.TimestampLocal - salidaEsperada).TotalMinutes;
+                int delta = (int)(salida.Timestamp - salidaEsperada).TotalMinutes;
                 resultado.Add(NuevaNovedad(empleado, TipoNovedad.HoraExtra50,
                     dia, dia, delta, OrigenNovedad.Automatica,
                     $"Horas extra día hábil ({delta} min)"));
@@ -175,7 +175,7 @@ public class MotorReglasService
         if (horario.InicioDescanso.HasValue && horario.FinDescanso.HasValue
             && salidaDesc != null && regresoDesc != null)
         {
-            int minutosTomados = (int)(regresoDesc.TimestampLocal - salidaDesc.TimestampLocal).TotalMinutes;
+            int minutosTomados = (int)(regresoDesc.Timestamp - salidaDesc.Timestamp).TotalMinutes;
             int minutosAsignados = (int)(horario.FinDescanso.Value - horario.InicioDescanso.Value).TotalMinutes;
 
             if (minutosTomados > minutosAsignados)
@@ -202,10 +202,10 @@ public class MotorReglasService
             var prev = fichadas[i - 1];
             var curr = fichadas[i];
             if (prev.Tipo == curr.Tipo &&
-                (curr.TimestampLocal - prev.TimestampLocal) <= ventana)
+                (curr.Timestamp - prev.Timestamp) <= ventana)
             {
                 resultado.Add(NuevaNovedad(empleado, TipoNovedad.DobleFichada,
-                    curr.TimestampLocal, curr.TimestampLocal, 1, OrigenNovedad.Automatica,
+                    curr.Timestamp, curr.Timestamp, 1, OrigenNovedad.Automatica,
                     $"Doble {curr.Tipo} en menos de {ventana.TotalMinutes} min"));
             }
         }

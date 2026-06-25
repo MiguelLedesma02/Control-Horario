@@ -4,14 +4,13 @@ import { PageHeader, Card, Spinner, Input, Badge, EmptyState } from '../componen
 import { fichadaService, novedadService } from '../services/services'
 import { useAuth } from '../context/AuthContext'
 import { fmtFecha, fmtHora, labelNovedad, colorEstado } from '../utils/format'
+import { todayLocal, firstOfMonthLocal } from '../utils/datetime'
 import type { Fichada, Novedad } from '../types'
 
 export function MisFichadas() {
   const { user } = useAuth()
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
-  const [desde, setDesde] = useState(inicioMes.toISOString().split('T')[0])
-  const [hasta, setHasta] = useState(new Date().toISOString().split('T')[0])
+  const [desde, setDesde] = useState(firstOfMonthLocal())
+  const [hasta, setHasta] = useState(todayLocal())
   const [lista, setLista] = useState<Fichada[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -67,10 +66,8 @@ export function MisFichadas() {
 
 export function MisNovedades() {
   const { user } = useAuth()
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
-  const [desde, setDesde] = useState(inicioMes.toISOString().split('T')[0])
-  const [hasta, setHasta] = useState(new Date().toISOString().split('T')[0])
+  const [desde, setDesde] = useState(firstOfMonthLocal())
+  const [hasta, setHasta] = useState(todayLocal())
   const [lista, setLista] = useState<Novedad[]>([])
   const [loading, setLoading] = useState(true)
 

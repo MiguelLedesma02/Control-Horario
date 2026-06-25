@@ -3,12 +3,13 @@ import { Plus, Users, Pencil, Power, Trash2, Upload, Download, AlertTriangle } f
 import { PageHeader, Card, Button, Badge, Spinner, Input, Select, Modal, EmptyState } from '../components/UI'
 import { empleadoService, horarioService } from '../services/services'
 import { fmtFecha } from '../utils/format'
+import { todayLocal } from '../utils/datetime'
 import type { Empleado, Horario } from '../types'
 import * as XLSX from 'xlsx'
 
 const formVacio = (horarios: Horario[]) => ({
   legajo: '', nombre: '', apellido: '', dni: '', cuil: '',
-  fechaIngreso: new Date().toISOString().split('T')[0],
+  fechaIngreso: todayLocal(),
   categoriaLaboral: '', convenioColectivo: '', tipoJornada: 'Completa',
   horarioId: horarios[0]?.id || 0, email: '', telefono: ''
 })
@@ -97,41 +98,6 @@ export default function EmpleadosPage() {
     XLSX.writeFile(wb, 'plantilla-empleados.xlsx')
   }
 
-  const JORNADAS_VALIDAS = ['Completa', 'Parcial', 'Flexible', 'Rotativa']
-
-  function normalizarFecha(val: any): string {
-    if (typeof val === 'number') {
-      // número serial de Excel → fecha
-      const fecha = new Date(Math.round((val - 25569) * 86400 * 1000))
-      return fecha.toISOString().split('T')[0]
-    }
-    const s = String(val).trim()
-    // admite dd/mm/yyyy o dd-mm-yyyy → convierte a yyyy-mm-dd
-    const dmY = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
-    if (dmY) return `${dmY[3]}-${dmY[2].padStart(2,'0')}-${dmY[1].padStart(2,'0')}`
-    return s // ya en formato yyyy-mm-dd u otro
-  }
-
-  function validarFilas(rows: any[]): string[] {
-    const errores: string[] = []
-    rows.forEach((r, i) => {
-      const fila = `Fila ${i + 2}`
-      if (!r.legajo) errores.push(`${fila}: falta "legajo"`)
-      if (!r.nombre) errores.push(`${fila}: falta "nombre"`)
-      if (!r.apellido) errores.push(`${fila}: falta "apellido"`)
-      if (!r.dni) errores.push(`${fila}: falta "dni"`)
-      if (!r.cuil) errores.push(`${fila}: falta "cuil"`)
-      if (!r.categoriaLaboral) errores.push(`${fila}: falta "categoriaLaboral"`)
-      if (!r.horarioId || isNaN(Number(r.horarioId))) errores.push(`${fila}: "horarioId" debe ser un número`)
-      const jornadaRaw = String(r.tipoJornada || '').trim()
-      const jornada = jornadaRaw.charAt(0).toUpperCase() + jornadaRaw.slice(1).toLowerCase()
-      if (!JORNADAS_VALIDAS.includes(jornada)) errores.push(`${fila}: "tipoJornada" inválido ("${jornadaRaw}"). Debe ser: ${JORNADAS_VALIDAS.join(', ')}`)
-      const fechaNorm = normalizarFecha(r.fechaIngreso)
-      if (!fechaNorm || isNaN(Date.parse(fechaNorm))) errores.push(`${fila}: "fechaIngreso" inválida ("${r.fechaIngreso}"). Usá formato YYYY-MM-DD`)
-    })
-    return errores
-  }
-
   function leerExcel(e: React.ChangeEvent<HTMLInputElement>) {
     setImportError(''); setImportPreview([]); setImportResult(null)
     const file = e.target.files?.[0]
@@ -142,26 +108,15 @@ export default function EmpleadosPage() {
         const wb = XLSX.read(ev.target?.result, { type: 'binary' })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
-        if (rows.length === 0) { setImportError('El archivo no contiene datos.'); return }
-
-        // Normalizar campos antes de validar
-        const parsed = rows.map(r => {
-          const jornadaRaw = String(r.tipoJornada || 'Completa').trim()
-          const jornada = jornadaRaw.charAt(0).toUpperCase() + jornadaRaw.slice(1).toLowerCase()
-          return {
-            ...r,
-            fechaIngreso: normalizarFecha(r.fechaIngreso),
-            horarioId: Number(r.horarioId),
-            tipoJornada: jornada,
-          }
-        })
-
-        const errores = validarFilas(rows)
-        if (errores.length > 0) {
-          setImportError('El archivo tiene errores:\n• ' + errores.join('\n• '))
-          return
-        }
-
+        if (rows.length === 0) { setImportError('El archivo no contiene datos'); return }
+        // normalizar fechas numéricas de Excel
+        const parsed = rows.map(r => ({
+          ...r,
+          fechaIngreso: typeof r.fechaIngreso === 'number'
+            ? XLSX.SSF.format('yyyy-mm-dd', r.fechaIngreso)
+            : String(r.fechaIngreso),
+          horarioId: Number(r.horarioId),
+        }))
         setImportPreview(parsed)
       } catch {
         setImportError('No se pudo leer el archivo. Asegurate de que sea un .xlsx válido.')
@@ -172,24 +127,12 @@ export default function EmpleadosPage() {
 
   async function confirmarImportar() {
     setImportando(true)
-    setImportError('')
     try {
       const result = await empleadoService.importar(importPreview)
       setImportResult(result)
       if (result.importados > 0) cargar()
     } catch (err: any) {
-      // Intentar extraer el mensaje de error más descriptivo posible
-      const data = err.response?.data
-      let msg = 'Error al importar. Revisá la consola para más detalles.'
-      if (typeof data === 'string' && data.length < 300) msg = data
-      else if (data?.message) msg = data.message
-      else if (data?.errors) {
-        // errores de validación de ASP.NET (400 con ProblemDetails)
-        const detalles = Object.entries(data.errors as Record<string, string[]>)
-          .flatMap(([campo, msgs]) => msgs.map((m: string) => `${campo}: ${m}`))
-        msg = 'Errores de validación:\n• ' + detalles.join('\n• ')
-      } else if (err.message) msg = err.message
-      setImportError(msg)
+      setImportError(err.response?.data?.message || 'Error al importar')
     } finally {
       setImportando(false)
     }
@@ -360,11 +303,7 @@ export default function EmpleadosPage() {
           {importError && (
             <div className="flex gap-2 items-start bg-bad/10 border border-bad/30 rounded-lg p-3">
               <AlertTriangle className="w-4 h-4 text-bad mt-0.5 shrink-0" />
-              <div className="text-sm text-bad">
-                {importError.split('\n').map((line, i) => (
-                  <p key={i} className={i > 0 ? 'mt-0.5' : ''}>{line}</p>
-                ))}
-              </div>
+              <p className="text-sm text-bad">{importError}</p>
             </div>
           )}
 

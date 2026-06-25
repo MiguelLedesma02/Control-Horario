@@ -1,4 +1,5 @@
 import api from './api'
+import { nowArgNaive } from '../utils/datetime'
 import type {
   LoginResponse, Empleado, Horario, Fichada, Novedad,
   ResumenEmpleado, CierreMensual, TipoFichada, OrigenFichada,
@@ -41,7 +42,7 @@ export const fichadaService = {
     api.get<Fichada[]>(`/fichadas/empleado/${empleadoId}`,
       { params: { desde, hasta } }).then(r => r.data),
   crear: (empleadoId: number, tipo: TipoFichada, origen: OrigenFichada,
-          timestamp = new Date().toISOString(), observacion?: string) =>
+          timestamp = nowArgNaive(), observacion?: string) =>
     api.post('/fichadas', { empleadoId, tipo, origen, timestamp, observacion }).then(r => r.data)
 }
 

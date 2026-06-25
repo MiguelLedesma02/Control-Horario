@@ -3,7 +3,7 @@ import { Plus, Clock, Filter } from 'lucide-react'
 import { PageHeader, Card, Button, Spinner, Input, Select, Modal, EmptyState, Badge } from '../components/UI'
 import { fichadaService, empleadoService } from '../services/services'
 import { fmtFecha, fmtHora } from '../utils/format'
-import { nowLocalInput, todayLocal, daysAgoLocal, localInputToArgISO } from '../utils/datetime'
+import { nowLocalInput, todayLocal, daysAgoLocal, localInputToNaive } from '../utils/datetime'
 import type { Fichada, Empleado } from '../types'
 
 export default function FichadasPage() {
@@ -15,8 +15,7 @@ export default function FichadasPage() {
   const [loading, setLoading] = useState(false)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({
-    empleadoId: 0, tipo: 'Entrada',
-    timestamp: nowLocalInput(), // hora local ARG, no UTC
+    empleadoId: 0, tipo: 'Entrada', timestamp: nowLocalInput(),
     observacion: ''
   })
 
@@ -38,13 +37,11 @@ export default function FichadasPage() {
 
   async function cargar(ev: React.FormEvent) {
     ev.preventDefault()
-    // Convertir el valor del input a ISO con offset -03:00 explícito
-    const timestampArg = localInputToArgISO(form.timestamp)
     await fichadaService.crear(
       Number(form.empleadoId),
       form.tipo as any,
       'Manual',
-      timestampArg,
+      localInputToNaive(form.timestamp),
       form.observacion
     )
     setModal(false)
@@ -124,7 +121,7 @@ export default function FichadasPage() {
             <option value="RegresoDescanso">Regreso descanso</option>
             <option value="Salida">Salida</option>
           </Select>
-          <Input label="Fecha y hora (horario Argentina)" type="datetime-local" value={form.timestamp} required
+          <Input label="Fecha y hora" type="datetime-local" value={form.timestamp} required
             onChange={e => setForm({ ...form, timestamp: e.target.value })} />
           <Input label="Observación (motivo)" value={form.observacion}
             placeholder="ej. Olvidó fichar a la entrada"

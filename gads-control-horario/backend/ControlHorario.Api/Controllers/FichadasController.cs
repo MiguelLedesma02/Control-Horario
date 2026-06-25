@@ -29,6 +29,7 @@ public class FichadasController : ControllerBase
     public async Task<IActionResult> GetByEmpleado(
         int empleadoId, [FromQuery] DateTime desde, [FromQuery] DateTime hasta)
     {
+        // Empleado solo puede ver lo suyo
         if (User.IsInRole("Empleado"))
         {
             var miId = User.FindFirstValue("EmpleadoId");
@@ -38,6 +39,10 @@ public class FichadasController : ControllerBase
         return Ok(lista.Select(Map));
     }
 
+    /// <summary>
+    /// Crea una fichada. Empleados pueden crear solo su propia fichada (entrada/salida).
+    /// Admins pueden cargar fichadas manuales por cualquier empleado.
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] FichadaCreateDto dto)
     {
@@ -54,28 +59,29 @@ public class FichadasController : ControllerBase
         var f = new Fichada
         {
             EmpleadoId = dto.EmpleadoId,
-            // Preservamos el DateTimeOffset tal como llegó (con offset -03:00)
             Timestamp = dto.Timestamp,
             Tipo = dto.Tipo,
             Origen = dto.Origen,
             Observacion = dto.Observacion,
-            UsuarioRegistroId = dto.Origen == OrigenFichada.Manual ? usuarioId : null
+            UsuarioRegistroId = (dto.Origen == OrigenFichada.Manual) ? usuarioId : null
         };
         await _repo.AddAsync(f);
         await _repo.SaveChangesAsync();
         return Ok(new { id = f.Id });
     }
 
+    /// <summary>
+    /// Endpoint para que dispositivos externos (relojes biométricos, apps de QR) envíen fichadas.
+    /// Solo Administrador (idealmente con API key separada en producción).
+    /// </summary>
     [HttpPost("api-externa")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> CrearDesdeApi([FromBody] FichadaCreateDto dto)
     {
         var f = new Fichada
         {
-            EmpleadoId = dto.EmpleadoId,
-            Timestamp = dto.Timestamp,
-            Tipo = dto.Tipo,
-            Origen = OrigenFichada.ApiExterna,
+            EmpleadoId = dto.EmpleadoId, Timestamp = dto.Timestamp,
+            Tipo = dto.Tipo, Origen = OrigenFichada.ApiExterna,
             Observacion = dto.Observacion
         };
         await _repo.AddAsync(f);

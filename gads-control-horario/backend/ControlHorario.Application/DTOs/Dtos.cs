@@ -23,16 +23,11 @@ public record HorarioDto(
     int ToleranciaEntradaMin, int ToleranciaSalidaMin, int UmbralHorasExtraMin);
 
 public record FichadaDto(
-    long Id, int EmpleadoId, string EmpleadoNombre,
-    // Devolvemos el timestamp con offset para que el frontend muestre la hora correcta
-    DateTimeOffset Timestamp,
+    long Id, int EmpleadoId, string EmpleadoNombre, DateTime Timestamp,
     TipoFichada Tipo, OrigenFichada Origen, string? Observacion, bool EsCorreccion);
 
 public record FichadaCreateDto(
-    int EmpleadoId,
-    // DateTimeOffset preserva el "-03:00" que envía el frontend
-    DateTimeOffset Timestamp,
-    TipoFichada Tipo, OrigenFichada Origen,
+    int EmpleadoId, DateTime Timestamp, TipoFichada Tipo, OrigenFichada Origen,
     string? Observacion);
 
 public record NovedadDto(

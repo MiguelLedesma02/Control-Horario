@@ -60,17 +60,23 @@ public class FichadaRepository : IFichadaRepository
     private readonly AppDbContext _ctx;
     public FichadaRepository(AppDbContext ctx) => _ctx = ctx;
 
-    public Task<List<Fichada>> GetByEmpleadoYRangoAsync(int empleadoId, DateTime desde, DateTime hasta) =>
-        _ctx.Fichadas.Where(f => f.EmpleadoId == empleadoId
-                              && f.Timestamp.DateTime >= desde
-                              && f.Timestamp.DateTime <= hasta.AddDays(1).AddTicks(-1))
+    public Task<List<Fichada>> GetByEmpleadoYRangoAsync(int empleadoId, DateTime desde, DateTime hasta)
+    {
+        var inicio = desde.Date;                          // comienzo del día (00:00)
+        var fin = hasta.Date.AddDays(1).AddTicks(-1);     // fin del día (23:59:59.999)
+        return _ctx.Fichadas.Where(f => f.EmpleadoId == empleadoId
+                              && f.Timestamp >= inicio && f.Timestamp <= fin)
             .OrderBy(f => f.Timestamp).ToListAsync();
+    }
 
-    public Task<List<Fichada>> GetByRangoAsync(DateTime desde, DateTime hasta) =>
-        _ctx.Fichadas.Include(f => f.Empleado)
-            .Where(f => f.Timestamp.DateTime >= desde
-                     && f.Timestamp.DateTime <= hasta.AddDays(1).AddTicks(-1))
+    public Task<List<Fichada>> GetByRangoAsync(DateTime desde, DateTime hasta)
+    {
+        var inicio = desde.Date;                          // comienzo del día (00:00)
+        var fin = hasta.Date.AddDays(1).AddTicks(-1);     // fin del día (23:59:59.999)
+        return _ctx.Fichadas.Include(f => f.Empleado)
+            .Where(f => f.Timestamp >= inicio && f.Timestamp <= fin)
             .OrderBy(f => f.Timestamp).ToListAsync();
+    }
 
     public async Task AddAsync(Fichada f) { await _ctx.Fichadas.AddAsync(f); }
     public Task<int> SaveChangesAsync() => _ctx.SaveChangesAsync();
@@ -81,16 +87,24 @@ public class NovedadRepository : INovedadRepository
     private readonly AppDbContext _ctx;
     public NovedadRepository(AppDbContext ctx) => _ctx = ctx;
 
-    public Task<List<Novedad>> GetByEmpleadoYRangoAsync(int empleadoId, DateTime desde, DateTime hasta) =>
-        _ctx.Novedades.Include(n => n.Empleado)
+    public Task<List<Novedad>> GetByEmpleadoYRangoAsync(int empleadoId, DateTime desde, DateTime hasta)
+    {
+        var inicio = desde.Date;                          // comienzo del día (00:00)
+        var fin = hasta.Date.AddDays(1).AddTicks(-1);     // fin del día (23:59:59.999)
+        return _ctx.Novedades.Include(n => n.Empleado)
             .Where(n => n.EmpleadoId == empleadoId
-                     && n.FechaDesde >= desde && n.FechaHasta <= hasta)
+                     && n.FechaDesde >= inicio && n.FechaHasta <= fin)
             .OrderBy(n => n.FechaDesde).ToListAsync();
+    }
 
-    public Task<List<Novedad>> GetByRangoAsync(DateTime desde, DateTime hasta) =>
-        _ctx.Novedades.Include(n => n.Empleado)
-            .Where(n => n.FechaDesde >= desde && n.FechaHasta <= hasta)
+    public Task<List<Novedad>> GetByRangoAsync(DateTime desde, DateTime hasta)
+    {
+        var inicio = desde.Date;                          // comienzo del día (00:00)
+        var fin = hasta.Date.AddDays(1).AddTicks(-1);     // fin del día (23:59:59.999)
+        return _ctx.Novedades.Include(n => n.Empleado)
+            .Where(n => n.FechaDesde >= inicio && n.FechaHasta <= fin)
             .OrderBy(n => n.FechaDesde).ToListAsync();
+    }
 
     public Task<List<Novedad>> GetPendientesAsync() =>
         _ctx.Novedades.Include(n => n.Empleado)
@@ -152,6 +166,10 @@ public class FeriadoRepository : IFeriadoRepository
     public FeriadoRepository(AppDbContext ctx) => _ctx = ctx;
 
     public Task<List<Feriado>> GetAllAsync() => _ctx.Feriados.OrderBy(f => f.Fecha).ToListAsync();
-    public Task<List<Feriado>> GetByRangoAsync(DateTime desde, DateTime hasta) =>
-        _ctx.Feriados.Where(f => f.Fecha >= desde && f.Fecha <= hasta).ToListAsync();
+    public Task<List<Feriado>> GetByRangoAsync(DateTime desde, DateTime hasta)
+    {
+        var inicio = desde.Date;                          // comienzo del día (00:00)
+        var fin = hasta.Date.AddDays(1).AddTicks(-1);     // fin del día (23:59:59.999)
+        return _ctx.Feriados.Where(f => f.Fecha >= inicio && f.Fecha <= fin).ToListAsync();
+    }
 }

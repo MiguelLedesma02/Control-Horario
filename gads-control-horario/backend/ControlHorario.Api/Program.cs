@@ -6,7 +6,6 @@ using ControlHorario.Infrastructure.Export;
 using ControlHorario.Infrastructure.Repositories;
 using ControlHorario.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -17,24 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
-        // Permite enviar/recibir enums como string (case-insensitive)
         o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-    })
-    .ConfigureApiBehaviorOptions(o =>
-    {
-        // Devuelve errores de validación como { message: "..." } legibles para el frontend
-        o.InvalidModelStateResponseFactory = ctx =>
-        {
-            var errores = ctx.ModelState
-                .Where(e => e.Value?.Errors.Count > 0)
-                .SelectMany(e => e.Value!.Errors.Select(x =>
-                    $"{e.Key}: {(string.IsNullOrEmpty(x.ErrorMessage) ? x.Exception?.Message : x.ErrorMessage)}"))
-                .ToList();
-            var msg = errores.Count > 0
-                ? "Error de validación: " + string.Join("; ", errores)
-                : "Solicitud inválida. Verificá el formato del JSON enviado.";
-            return new BadRequestObjectResult(new { message = msg });
-        };
     });
 
 // EF Core
@@ -77,9 +59,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         var c = builder.Configuration;
         opts.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, ValidateAudience = true,
-            ValidateLifetime = true, ValidateIssuerSigningKey = true,
-            ValidIssuer = c["Jwt:Issuer"], ValidAudience = c["Jwt:Audience"],
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = c["Jwt:Issuer"],
+            ValidAudience = c["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(c["Jwt:Key"]!))
         };
     });
@@ -98,8 +83,10 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT (sin el prefijo Bearer)",
-        Name = "Authorization", In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http, Scheme = "bearer"
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {

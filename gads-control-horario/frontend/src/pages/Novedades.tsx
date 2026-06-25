@@ -3,6 +3,7 @@ import { Plus, FileWarning, Check, X, Filter } from 'lucide-react'
 import { PageHeader, Card, Button, Spinner, Input, Select, Modal, EmptyState, Badge } from '../components/UI'
 import { novedadService, empleadoService } from '../services/services'
 import { fmtFecha, labelNovedad, colorEstado } from '../utils/format'
+import { todayLocal, firstOfMonthLocal } from '../utils/datetime'
 import type { Novedad, Empleado, EstadoNovedad } from '../types'
 
 const tiposManuales = [
@@ -12,11 +13,9 @@ const tiposManuales = [
 ]
 
 export default function NovedadesPage() {
-  const hoy = new Date().toISOString().split('T')[0]
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
+  const hoy = todayLocal()
 
-  const [desde, setDesde] = useState(inicioMes.toISOString().split('T')[0])
+  const [desde, setDesde] = useState(firstOfMonthLocal())
   const [hasta, setHasta] = useState(hoy)
   const [estado, setEstado] = useState<EstadoNovedad | ''>('')
   const [empleados, setEmpleados] = useState<Empleado[]>([])

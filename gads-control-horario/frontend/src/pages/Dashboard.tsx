@@ -5,6 +5,7 @@ import { Card, PageHeader, Stat, Badge, Spinner, Button } from '../components/UI
 import { empleadoService, novedadService, fichadaService } from '../services/services'
 import { useAuth } from '../context/AuthContext'
 import { fmtHora, fmtFecha, labelNovedad, colorEstado, minutosAHoras } from '../utils/format'
+import { todayLocal, firstOfMonthLocal, horaActualArg, TZ_ARG } from '../utils/datetime'
 import type { Empleado, Novedad, Fichada } from '../types'
 
 export default function Dashboard() {
@@ -16,7 +17,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user?.rol !== 'Administrador') { setLoading(false); return }
-    const hoy = new Date().toISOString().split('T')[0]
+    const hoy = todayLocal()
     Promise.all([
       empleadoService.getAll(true),
       novedadService.getPendientes(),
@@ -37,7 +38,7 @@ export default function Dashboard() {
     <>
       <PageHeader
         title={`Buenas, ${user!.nombre.split(' ')[0]}.`}
-        subtitle={`Hoy es ${new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+        subtitle={`Hoy es ${new Date().toLocaleDateString('es-AR', { timeZone: TZ_ARG, weekday: 'long', day: 'numeric', month: 'long' })}`}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -127,12 +128,10 @@ function DashboardEmpleado() {
 
   useEffect(() => {
     if (!user?.empleadoId) return
-    const hoy = new Date().toISOString().split('T')[0]
-    const inicioMes = new Date()
-    inicioMes.setDate(1)
+    const hoy = todayLocal()
     Promise.all([
       fichadaService.getByEmpleado(user.empleadoId, hoy, hoy),
-      novedadService.getByEmpleado(user.empleadoId, inicioMes.toISOString().split('T')[0], hoy)
+      novedadService.getByEmpleado(user.empleadoId, firstOfMonthLocal(), hoy)
     ]).then(([f, n]) => { setMisFichadas(f); setMisNovedades(n) })
       .finally(() => setLoading(false))
   }, [user, marcando])
@@ -156,9 +155,9 @@ function DashboardEmpleado() {
       <Card className="p-8 mb-8 text-center bg-gradient-to-br from-ink-900 to-ink-800">
         <div className="font-mono text-xs text-accent uppercase tracking-widest mb-3">→ Marcá tu fichada</div>
         <div className="font-display text-6xl font-bold text-white mb-2">
-          {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          {horaActualArg()}
         </div>
-        <div className="text-ink-300 mb-6">{new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        <div className="text-ink-300 mb-6">{new Date().toLocaleDateString('es-AR', { timeZone: TZ_ARG, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
         <div className="flex gap-3 justify-center flex-wrap">
           <Button onClick={() => marcar('Entrada')} disabled={marcando || yaMarcoEntrada}>Entrada</Button>
           <Button variant="secondary" onClick={() => marcar('SalidaDescanso')} disabled={marcando}>Salida descanso</Button>
